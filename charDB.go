@@ -42,3 +42,13 @@ func (db *charDB) Get(key []byte) []byte {
 
   return []byte{}
 }
+
+func findKey(fileScanner *bufio.Scanner, key []byte) bool {
+	for fileScanner.Scan() {
+		if (bytes.Compare(fileScanner.Bytes(), key) == 0) {
+			return true
+    }
+		fileScanner.Scan()
+  }
+	return false
+}
