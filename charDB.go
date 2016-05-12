@@ -26,21 +26,21 @@ func (db *charDB) Put(key []byte, value []byte) error {
 	data := append(key, newline...)
 	data = append(data, value...)
 	data = append(data, newline...)
+
 	db.file.WriteAt(data, writeToPosition)
 	return nil
 }
 
 func (db *charDB) Get(key []byte) []byte {
   fileScanner := bufio.NewScanner(db.file)
-  for fileScanner.Scan() {
-		if (bytes.Compare(fileScanner.Bytes(), key) == 0) {
-    	fileScanner.Scan()
-			return fileScanner.Bytes()
-    }
-		fileScanner.Scan()
-  }
 
-  return []byte{}
+	keyFound := findKey(fileScanner, key)
+	if keyFound {
+		fileScanner.Scan()
+		return fileScanner.Bytes()
+	}
+
+	return []byte{}
 }
 
 func findKey(fileScanner *bufio.Scanner, key []byte) bool {
