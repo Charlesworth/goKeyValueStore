@@ -4,6 +4,8 @@ import (
 	"os"
   "bufio"
 	"bytes"
+	"strings"
+	"errors"
 )
 
 type charDB struct {
@@ -11,8 +13,45 @@ type charDB struct {
 }
 
 func Open(dbFileName string) (*charDB, error) {
-	file, err := os.OpenFile(dbFileName, os.O_CREATE, 0777)
+	//check if db file exists already
+	newDBFile := false
+	_, err := os.Stat(dbFileName)
+	if err != nil && strings.Contains(err.Error(), "cannot find the file"){
+		newDBFile = true
+	}
+
+	//open or create the db file
+	file, err := os.OpenFile(dbFileName, os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
+
+	// if the db file already exists then memory map the keys to their offsets
+	if !newDBFile {
+		err = validateDBFile(file)
+		//map in here
+	}
+
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
 	return &charDB{file}, err
+}
+
+func validateDBFile(file *os.File) error {
+	// check that
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	if fileInfo.Size() == 0 {
+		return errors.New("invalid db file: file is empty")
+	}
+
+	return nil
 }
 
 func (db *charDB) Close() error {

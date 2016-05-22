@@ -54,23 +54,22 @@ func TestOpen_OnNewFile(t *testing.T) {
   testDB.Close()
 }
 
-func TestOpen_OnExistingFile(t *testing.T) {
-	testDBFileName := "TestOpen_OnExistingFile"
+func TestOpen_OnExistingFile_CannotValidateFile(t *testing.T) {
+	testDBFileName := "TestOpen_OnExistingFile_CannotValidateFile"
 	testFiles = append(testFiles, testDBFileName)
 
-	//  make a pre existing file for this test case
-  makeEmptyFile(testDBFileName, t).Close()
+	// make a pre existing file for this test case
+	makeEmptyFile(testDBFileName, t).Close()
 
 	testDB, err := Open(testDBFileName)
 
-	if testDB == nil {
-		t.Log("Open() should return a non nil charDB pointer")
-		t.Error("Error: Open() did not return a *charDB, instead returned nil")
+	if testDB != nil {
+		t.Log("Open() should return a nil charDB pointer on a invalid DB file")
+		t.Error("Error: Open() on a invalid db file should return nil")
 	}
 
-	if err != nil {
-		t.Log("Open() should return err == nil")
-		t.Error("Error: ", err)
+	if err == nil {
+		t.Error("Error: Open() should return err when opening an invalid db file")
 	}
 
 	_, err = os.Stat(testDBFileName)
@@ -78,8 +77,6 @@ func TestOpen_OnExistingFile(t *testing.T) {
 		t.Log("Open() when the file already exists shouldn't delete the file")
 		t.Error("Error:", err)
 	}
-
-  testDB.Close()
 }
 
 func TestPut_OnNewKey(t *testing.T) {
@@ -123,6 +120,42 @@ func TestPut_OnMultipleDifferentKeys(t *testing.T) {
   }
 
   testDB.Close()
+}
+
+func TestOpen_OnExistingFile(t *testing.T) {
+	testDBFileName := "TestOpen_OnExistingFile"
+	testFiles = append(testFiles, testDBFileName)
+
+	// makeEmptyFile(testDBFileName, t).Close()
+
+	// make a pre existing file for this test case
+	testDB, err := Open(testDBFileName)
+	if err != nil {
+		t.Error("Test Error: unable to make the pre-existing test file for this test")
+	}
+	testDB.Put([]byte("value"), []byte("value"))
+	testDB.Close()
+
+	// reopen the file, which should now be a valid db file after initialisation
+	testDB, err = Open(testDBFileName)
+
+	if testDB == nil {
+		t.Log("Open() should return a non nil charDB pointer")
+		t.Error("Error: Open() did not return a *charDB, instead returned nil")
+	}
+
+	if err != nil {
+		t.Log("Open() should return err == nil")
+		t.Error("Error: ", err)
+	}
+
+	_, err = os.Stat(testDBFileName)
+	if err != nil {
+		t.Log("Open() when the file already exists shouldn't delete the file")
+		t.Error("Error:", err)
+	}
+
+	testDB.Close()
 }
 
 func TestGet_OnExistingKey(t *testing.T) {
