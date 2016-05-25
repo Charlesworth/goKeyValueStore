@@ -1,32 +1,32 @@
-package charDB
+package goKeyValueStore
 
 import (
+	"bytes"
 	"os"
 	"testing"
-  "bytes"
 )
 
 // add any test files produced to this array for later cleanup
 var testFiles []string
 
 func TestClose(t *testing.T) {
-  testDBFileName := "TestClose"
-  testFiles = append(testFiles, testDBFileName)
-  file := makeEmptyFile(testDBFileName, t)
+	testDBFileName := "TestClose"
+	testFiles = append(testFiles, testDBFileName)
+	file := makeEmptyFile(testDBFileName, t)
 
-  testDB := &charDB{file}
+	testDB := &charDB{file}
 
-  err := testDB.Close()
-  if err != nil {
-    t.Log("Close() should os.File.Close() without error")
-    t.Error("Error: ", err)
-  }
+	err := testDB.Close()
+	if err != nil {
+		t.Log("Close() should os.File.Close() without error")
+		t.Error("Error: ", err)
+	}
 
-  _, err = file.Write([]byte("some data"))
-  if err == nil {
-    t.Log("Once Closed, we should expect an error if we try to write")
-    t.Error("Error: no error returned from apemting to write to closed file")
-  }
+	_, err = file.Write([]byte("some data"))
+	if err == nil {
+		t.Log("Once Closed, we should expect an error if we try to write")
+		t.Error("Error: no error returned from apemting to write to closed file")
+	}
 }
 
 func TestOpen_OnNewFile(t *testing.T) {
@@ -51,7 +51,7 @@ func TestOpen_OnNewFile(t *testing.T) {
 		t.Error("Error:", err)
 	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestOpen_OnExistingFile_CannotValidateFile(t *testing.T) {
@@ -82,44 +82,44 @@ func TestOpen_OnExistingFile_CannotValidateFile(t *testing.T) {
 func TestPut_OnNewKey(t *testing.T) {
 	testDB := newTestDB("TestPut_OnNewKey", t)
 
-  key, value := []byte("hello"), []byte("goodbyte")
-  err := testDB.Put(key, value)
-  if err != nil {
-    t.Log(".Put() returned with an error")
-    t.Error(err)
-  }
+	key, value := []byte("hello"), []byte("goodbyte")
+	err := testDB.Put(key, value)
+	if err != nil {
+		t.Log(".Put() returned with an error")
+		t.Error(err)
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestPut_OnExistingKey(t *testing.T) {
-  testDB := newTestDB("TestPut_OnExistingKey", t)
+	testDB := newTestDB("TestPut_OnExistingKey", t)
 
-  key, oldValue, newValue := []byte("hello"), []byte("goodbyte"), []byte("byte me")
-  testDB.Put(key, oldValue)
-  err := testDB.Put(key, newValue)
-  if err != nil {
-    t.Log(".Put() returned with an error")
-    t.Error(err)
-  }
+	key, oldValue, newValue := []byte("hello"), []byte("goodbyte"), []byte("byte me")
+	testDB.Put(key, oldValue)
+	err := testDB.Put(key, newValue)
+	if err != nil {
+		t.Log(".Put() returned with an error")
+		t.Error(err)
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestPut_OnMultipleDifferentKeys(t *testing.T) {
-  testDB := newTestDB("TestPut_OnMultipleDifferentKeys", t)
+	testDB := newTestDB("TestPut_OnMultipleDifferentKeys", t)
 
-  key, value := []byte("hello"), []byte("goodbyte")
-  testDB.Put(key, value)
+	key, value := []byte("hello"), []byte("goodbyte")
+	testDB.Put(key, value)
 
-  differentKey, differentValue := []byte("afternoon"), []byte("good evening")
-  err := testDB.Put(differentKey, differentValue)
-  if err != nil {
-    t.Log(".Put() returned with an error")
-    t.Error(err)
-  }
+	differentKey, differentValue := []byte("afternoon"), []byte("good evening")
+	err := testDB.Put(differentKey, differentValue)
+	if err != nil {
+		t.Log(".Put() returned with an error")
+		t.Error(err)
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestOpen_OnExistingFile(t *testing.T) {
@@ -159,47 +159,47 @@ func TestOpen_OnExistingFile(t *testing.T) {
 }
 
 func TestGet_OnExistingKey(t *testing.T) {
-  testDB := newTestDB("TestGet_OnExistingKey", t)
+	testDB := newTestDB("TestGet_OnExistingKey", t)
 	key, inputValue := []byte("hello"), []byte("goodbyte")
-  testDB.Put(key, inputValue)
+	testDB.Put(key, inputValue)
 
-  outputValue := testDB.Get(key)
-  if !(bytes.Compare(inputValue, outputValue) == 0) {
-    t.Log("Get() on a existing key did not return matching value")
-    t.Error("Error: input value [", inputValue, "] output value: [", outputValue, "]")
-  }
+	outputValue := testDB.Get(key)
+	if !(bytes.Compare(inputValue, outputValue) == 0) {
+		t.Log("Get() on a existing key did not return matching value")
+		t.Error("Error: input value [", inputValue, "] output value: [", outputValue, "]")
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestGet_OnNonExistantKey(t *testing.T) {
 	testDB := newTestDB("TestGet_OnNonExistantKey", t)
 	key, expectedOutputValue := []byte("hello"), []byte{}
 
-  outputValue := testDB.Get(key)
-  if !(bytes.Compare(expectedOutputValue, outputValue) == 0) {
-    t.Log("Get() on a non-existant key did not return matching value")
-    t.Error("Error: input value [", expectedOutputValue, "] output value: [", outputValue, "]")
-  }
+	outputValue := testDB.Get(key)
+	if !(bytes.Compare(expectedOutputValue, outputValue) == 0) {
+		t.Log("Get() on a non-existant key did not return matching value")
+		t.Error("Error: input value [", expectedOutputValue, "] output value: [", outputValue, "]")
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestGet_OnMultipleExistingKeys(t *testing.T) {
-  testDB := newTestDB("TestGet_OnMultipleExistingKeys", t)
+	testDB := newTestDB("TestGet_OnMultipleExistingKeys", t)
 	falseKey, falseValue := []byte("hi"), []byte("bye")
-  testDB.Put(falseKey, falseValue)
+	testDB.Put(falseKey, falseValue)
 
 	key, inputValue := []byte("hello"), []byte("goodbyte")
-  testDB.Put(key, inputValue)
+	testDB.Put(key, inputValue)
 
-  outputValue := testDB.Get(key)
-  if !(bytes.Compare(inputValue, outputValue) == 0) {
-    t.Log("Get() on a existing key did not return matching value")
-    t.Error("Error: input value [", inputValue, "] output value: [", outputValue, "]")
-  }
+	outputValue := testDB.Get(key)
+	if !(bytes.Compare(inputValue, outputValue) == 0) {
+		t.Log("Get() on a existing key did not return matching value")
+		t.Error("Error: input value [", inputValue, "] output value: [", outputValue, "]")
+	}
 
-  testDB.Close()
+	testDB.Close()
 }
 
 func TestCleanUp(t *testing.T) {
@@ -224,10 +224,10 @@ func newTestDB(testDBName string, t *testing.T) *charDB {
 }
 
 func makeEmptyFile(fileName string, t *testing.T) *os.File {
-  file, err := os.OpenFile(fileName, os.O_CREATE, 0777)
-  if err != nil {
-    t.Fatal("makeEmptyFile testing helper function failed:", err)
-  }
+	file, err := os.OpenFile(fileName, os.O_CREATE, 0777)
+	if err != nil {
+		t.Fatal("makeEmptyFile testing helper function failed:", err)
+	}
 
-  return file
+	return file
 }

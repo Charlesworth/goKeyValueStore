@@ -1,23 +1,30 @@
-package charDB
+package goKeyValueStore
 
 import (
-	"os"
-  "bufio"
+	"bufio"
 	"bytes"
-	"strings"
 	"errors"
+	"os"
+	"strings"
 )
+
+var keyValueDelimiter byte = 30
+var valueDelimiter byte = 31
 
 type charDB struct {
 	file *os.File
 }
 
 func Open(dbFileName string) (*charDB, error) {
-	//check if db file exists already
-	newDBFile := false
+	// check if db file exists already
+
+	// for whatever reason this is breaking
+	// newDB := filePresent(dbFileName)
+
+	newDB := false
 	_, err := os.Stat(dbFileName)
-	if err != nil && strings.Contains(err.Error(), "cannot find the file"){
-		newDBFile = true
+	if err != nil && strings.Contains(err.Error(), "cannot find the file") {
+		newDB = true
 	}
 
 	//open or create the db file
@@ -27,10 +34,14 @@ func Open(dbFileName string) (*charDB, error) {
 		return nil, err
 	}
 
-	// if the db file already exists then memory map the keys to their offsets
-	if !newDBFile {
+	// if the db file already exists then validate and memory map the
+	// keys to their offsets
+	if newDB {
+		// setup file
+		// make empty map
+	} else {
 		err = validateDBFile(file)
-		//map in here
+		// map in here
 	}
 
 	if err != nil {
@@ -38,6 +49,16 @@ func Open(dbFileName string) (*charDB, error) {
 		return nil, err
 	}
 	return &charDB{file}, err
+}
+
+// BROCKEN, DON'T KNOW WHY
+// filePresent checks the pwd and returns if file 'filename' is present
+func filePresent(fileName string) bool {
+	_, err := os.Stat(fileName)
+	if err != nil && strings.Contains(err.Error(), "cannot find the file") {
+		return false
+	}
+	return true
 }
 
 func validateDBFile(file *os.File) error {
@@ -51,11 +72,13 @@ func validateDBFile(file *os.File) error {
 		return errors.New("invalid db file: file is empty")
 	}
 
+	// add data validation here
+
 	return nil
 }
 
 func (db *charDB) Close() error {
-  return db.file.Close()
+	return db.file.Close()
 }
 
 func (db *charDB) Put(key []byte, value []byte) error {
@@ -71,7 +94,7 @@ func (db *charDB) Put(key []byte, value []byte) error {
 }
 
 func (db *charDB) Get(key []byte) []byte {
-  fileScanner := bufio.NewScanner(db.file)
+	fileScanner := bufio.NewScanner(db.file)
 
 	keyFound := findKey(fileScanner, key)
 	if keyFound {
@@ -84,10 +107,10 @@ func (db *charDB) Get(key []byte) []byte {
 
 func findKey(fileScanner *bufio.Scanner, key []byte) bool {
 	for fileScanner.Scan() {
-		if (bytes.Compare(fileScanner.Bytes(), key) == 0) {
+		if bytes.Compare(fileScanner.Bytes(), key) == 0 {
 			return true
-    }
+		}
 		fileScanner.Scan()
-  }
+	}
 	return false
 }
