@@ -14,7 +14,7 @@ func TestClose(t *testing.T) {
 	testFiles = append(testFiles, testDBFileName)
 	file := makeEmptyFile(testDBFileName, t)
 
-	testDB := &kVStore{file}
+	testDB := &kVStore{file, make(map[[10]byte]int64)}
 
 	err := testDB.Close()
 	if err != nil {

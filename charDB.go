@@ -8,11 +8,9 @@ import (
 	"strings"
 )
 
-var keyValueDelimiter byte = 30
-var valueDelimiter byte = 31
-
 type kVStore struct {
-	file *os.File
+	file           *os.File
+	keyLocationMap map[[10]byte]int64
 }
 
 /*
@@ -56,7 +54,40 @@ func Open(dbFileName string) (*kVStore, error) {
 		file.Close()
 		return nil, err
 	}
-	return &kVStore{file}, err
+
+	keyLocationMap := make(map[[10]byte]int64)
+	return &kVStore{file, keyLocationMap}, err
+}
+
+// rubbish, don't use until filescanner has been re-implemented
+func (kVS *kVStore) scanKeys() error {
+
+	fileScanner := bufio.NewScanner(kVS.file)
+	fileScanner.Split(keyValueSplitFunc)
+
+	for fileScanner.Scan() {
+		kV := fileScanner.Bytes()
+		_, _, err := keyValueSplit(kV)
+		if err != nil {
+			panic("shit!")
+		}
+
+		// not implemented: fileScanner.Position
+
+		// kVS.keyLocationMap[key] =
+	}
+	return nil
+}
+
+func keyValueSplit(kV []byte) (key []byte, value []byte, err error) {
+	valueDelimiterPosition := bytes.IndexByte(kV, valueDelimiter)
+
+	//returns -1 when valueDelimiter is not present, return an error
+	if valueDelimiterPosition == -1 {
+		return nil, nil, errors.New("cannot find value delimiter")
+	}
+
+	return kV[:valueDelimiterPosition-1], kV[valueDelimiterPosition+1:], nil
 }
 
 func validateDBFile(file *os.File) error {
