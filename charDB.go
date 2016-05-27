@@ -11,16 +11,24 @@ import (
 var keyValueDelimiter byte = 30
 var valueDelimiter byte = 31
 
-type charDB struct {
+type kVStore struct {
 	file *os.File
 }
 
-func Open(dbFileName string) (*charDB, error) {
+/*
+ideal struct at the end
+type kVStore struct {
+	dataFile 	*os.File
+	freedMem 	(ordered list of size and location pairs, sortable by size)
+	keyMap		BTreeMap of keys to locations
+}
+
+need to find a way to give variable key sizes or split the key so there
+cannot be any collisions
+*/
+
+func Open(dbFileName string) (*kVStore, error) {
 	// check if db file exists already
-
-	// for whatever reason this is breaking
-	// newDB := filePresent(dbFileName)
-
 	newDB := false
 	_, err := os.Stat(dbFileName)
 	if err != nil && strings.Contains(err.Error(), "cannot find the file") {
@@ -48,17 +56,7 @@ func Open(dbFileName string) (*charDB, error) {
 		file.Close()
 		return nil, err
 	}
-	return &charDB{file}, err
-}
-
-// BROCKEN, DON'T KNOW WHY
-// filePresent checks the pwd and returns if file 'filename' is present
-func filePresent(fileName string) bool {
-	_, err := os.Stat(fileName)
-	if err != nil && strings.Contains(err.Error(), "cannot find the file") {
-		return false
-	}
-	return true
+	return &kVStore{file}, err
 }
 
 func validateDBFile(file *os.File) error {
@@ -77,40 +75,78 @@ func validateDBFile(file *os.File) error {
 	return nil
 }
 
-func (db *charDB) Close() error {
+func (db *kVStore) Close() error {
 	return db.file.Close()
 }
 
-func (db *charDB) Put(key []byte, value []byte) error {
+func (db *kVStore) Put(key []byte, value []byte) error {
+	currentDBValue := db.Get(key)
+	if currentDBValue == nil {
+		// zero current key memory location
+	}
+
 	fileInfo, _ := db.file.Stat()
 	writeToPosition := fileInfo.Size()
-	newline := []byte("\n")
-	data := append(key, newline...)
+	data := append(key, valueDelimiter)
 	data = append(data, value...)
-	data = append(data, newline...)
+	data = append(data, keyValueDelimiter)
 
 	db.file.WriteAt(data, writeToPosition)
 	return nil
 }
 
-func (db *charDB) Get(key []byte) []byte {
+func (db *kVStore) Get(key []byte) []byte {
+
 	fileScanner := bufio.NewScanner(db.file)
+	fileScanner.Split(keyValueSplitFunc)
 
 	keyFound := findKey(fileScanner, key)
 	if keyFound {
-		fileScanner.Scan()
-		return fileScanner.Bytes()
+		kV := fileScanner.Bytes()
+		value := getValueFromKVBytes(kV)
+		return value
 	}
 
-	return []byte{}
+	return nil
+}
+
+func getValueFromKVBytes(kV []byte) []byte {
+	i := bytes.IndexByte(kV, valueDelimiter)
+
+	//returns -1 when valueDelimiter is not present, need an error in here
+	if i == -1 {
+		return []byte{}
+	}
+
+	//use i here to split and give the value
+	return kV[i+1:]
+}
+
+func keyValueSplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// if atEOF && len(data) == 0 {
+
+	// if at EOF, as the key vals have a trailing delimiter, return nothing
+	if atEOF || len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	if i := bytes.IndexByte(data, keyValueDelimiter); i >= 0 {
+		return i + 1, data[0:i], nil
+	}
+
+	// if atEOF {
+	// 	return
+	// }
+
+	return
 }
 
 func findKey(fileScanner *bufio.Scanner, key []byte) bool {
+	keyAndDelimiter := append(key, valueDelimiter)
 	for fileScanner.Scan() {
-		if bytes.Compare(fileScanner.Bytes(), key) == 0 {
+		if bytes.Contains(fileScanner.Bytes(), keyAndDelimiter) {
 			return true
 		}
-		fileScanner.Scan()
 	}
 	return false
 }

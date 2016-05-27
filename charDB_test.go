@@ -14,7 +14,7 @@ func TestClose(t *testing.T) {
 	testFiles = append(testFiles, testDBFileName)
 	file := makeEmptyFile(testDBFileName, t)
 
-	testDB := &charDB{file}
+	testDB := &kVStore{file}
 
 	err := testDB.Close()
 	if err != nil {
@@ -36,8 +36,8 @@ func TestOpen_OnNewFile(t *testing.T) {
 	testDB, err := Open(testDBFileName)
 
 	if testDB == nil {
-		t.Log("Open() should return a non nil charDB pointer")
-		t.Error("Error: Open() did not return a *charDB, instead returned nil")
+		t.Log("Open() should return a non nil kVStore pointer")
+		t.Error("Error: Open() did not return a *kVStore, instead returned nil")
 	}
 
 	if err != nil {
@@ -64,7 +64,7 @@ func TestOpen_OnExistingFile_CannotValidateFile(t *testing.T) {
 	testDB, err := Open(testDBFileName)
 
 	if testDB != nil {
-		t.Log("Open() should return a nil charDB pointer on a invalid DB file")
+		t.Log("Open() should return a nil kVStore pointer on a invalid DB file")
 		t.Error("Error: Open() on a invalid db file should return nil")
 	}
 
@@ -140,8 +140,8 @@ func TestOpen_OnExistingFile(t *testing.T) {
 	testDB, err = Open(testDBFileName)
 
 	if testDB == nil {
-		t.Log("Open() should return a non nil charDB pointer")
-		t.Error("Error: Open() did not return a *charDB, instead returned nil")
+		t.Log("Open() should return a non nil kVStore pointer")
+		t.Error("Error: Open() did not return a *kVStore, instead returned nil")
 	}
 
 	if err != nil {
@@ -212,7 +212,7 @@ func TestCleanUp(t *testing.T) {
 	}
 }
 
-func newTestDB(testDBName string, t *testing.T) *charDB {
+func newTestDB(testDBName string, t *testing.T) *kVStore {
 	testFiles = append(testFiles, testDBName)
 
 	testDB, err := Open(testDBName)

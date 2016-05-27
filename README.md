@@ -1,12 +1,17 @@
 # goKeyValueStore
 Making a K/V store to learn more about how they, files, file systems and B-trees work
 
-## Release 1 target - initial design, no B-tree
+## Release 1 - initial design, no B-tree, pretty crappy design but well tested, do not use!
 
-Keys and values are stored in one file with a common separation value. On startup the file is memory-mapped giving a key/offset map.
+- goKeyValueStore.Open(filename string) (\*kVStore)
+- kVStore.Get(key []byte) (value []byte)
+- kVStore.Put(key []byte, key []byte) (error)
+- kVStore.Close() (error)
 
-On a read the map is read to give a key's offset position, the value is then read from that position.
+#### A solid start with very little going on internally, now this base is finished I can continue with memory zeroing, re-insertion of keys and faster Gets.
 
-On a write, the map is first checked for the pre-existence of the key. In the case it is a new key, the key and value will be appended to end of the file and key/offset added to the map. If the key is present in the map, that key/value data location will be compared against the new k/v size. If the new k/v will fit in the existing location it will be placed there, else the k/v will be appended to the end of the file, the previous data location zeroed and its map entry updated to reflect the change.
+Keys and values are stored in one file using ASCII delimiters. On Open(filename) the file is checked that it contains some data, or a new file is created if non-existant on the file system. Close() will safely close the db file.
 
-As a small add on I would like to include memory of zeroed space, so that new k/v placements can examine the zeroed space and if suitable fill it.
+On a Get(key) the whole DB is scanned to give a key's position, the value is then read from that position.
+
+On a Put(key, value) the k/v pair is appended to the end of the file. if the key is a repeat then you will always get the first value added.
