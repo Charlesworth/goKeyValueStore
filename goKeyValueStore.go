@@ -13,17 +13,7 @@ type kVStore struct {
 	keyLocationMap map[[10]byte]int64
 }
 
-/*
-ideal struct at the end
-type kVStore struct {
-	dataFile 	*os.File
-	freedMem 	(ordered list of size and location pairs, sortable by size)
-	keyMap		BTreeMap of keys to locations
-}
-
-need to find a way to give variable key sizes or split the key so there
-cannot be any collisions
-*/
+var nullDelimiter byte = 31 // used to show zeroed memory
 
 func Open(dbFileName string) (*kVStore, error) {
 	// check if db file exists already
@@ -43,11 +33,11 @@ func Open(dbFileName string) (*kVStore, error) {
 	// if the db file already exists then validate and memory map the
 	// keys to their offsets
 	if newDB {
-		// setup file
-		// make empty map
+		// first time file setup
+		// make empty map[key]offset
 	} else {
 		err = validateDBFile(file)
-		// map in here
+		// memory map to map[key]offset
 	}
 
 	if err != nil {
@@ -59,49 +49,25 @@ func Open(dbFileName string) (*kVStore, error) {
 	return &kVStore{file, keyLocationMap}, err
 }
 
-// rubbish, don't use until filescanner has been re-implemented
-func (kVS *kVStore) scanKeys() error {
-
-	fileScanner := bufio.NewScanner(kVS.file)
-	fileScanner.Split(keyValueSplitFunc)
-
-	for fileScanner.Scan() {
-		kV := fileScanner.Bytes()
-		_, _, err := keyValueSplit(kV)
-		if err != nil {
-			panic("shit!")
-		}
-
-		// not implemented: fileScanner.Position
-
-		// kVS.keyLocationMap[key] =
-	}
+func zeroMemory(memOffset int64, bytesToZero int) error {
+	// zero the memory
+	// place the nullDelimiter in mem location to indicate zeroing
 	return nil
 }
 
-func keyValueSplit(kV []byte) (key []byte, value []byte, err error) {
-	valueDelimiterPosition := bytes.IndexByte(kV, valueDelimiter)
-
-	//returns -1 when valueDelimiter is not present, return an error
-	if valueDelimiterPosition == -1 {
-		return nil, nil, errors.New("cannot find value delimiter")
-	}
-
-	return kV[:valueDelimiterPosition-1], kV[valueDelimiterPosition+1:], nil
-}
-
 func validateDBFile(file *os.File) error {
-	// check that
+	// check that file size is not 0
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
 	}
 
 	if fileInfo.Size() == 0 {
-		return errors.New("invalid db file: file is empty")
+		// if file size is zero, invalid file
+		return errors.New("invalid db file: file has not been initialised")
 	}
 
-	// add data validation here
+	// add additional file validation here
 
 	return nil
 }
@@ -133,41 +99,28 @@ func (db *kVStore) Get(key []byte) []byte {
 
 	keyFound := findKey(fileScanner, key)
 	if keyFound {
-		kV := fileScanner.Bytes()
-		value := getValueFromKVBytes(kV)
-		return value
+		kVByte := fileScanner.Bytes()
+		_, value, err := splitKVByte(kVByte)
+		// this bit needs improved error handling
+		if err == nil {
+			return value
+		}
 	}
 
 	return nil
 }
 
-func getValueFromKVBytes(kV []byte) []byte {
-	i := bytes.IndexByte(kV, valueDelimiter)
-
-	//returns -1 when valueDelimiter is not present, need an error in here
-	if i == -1 {
-		return []byte{}
-	}
-
-	//use i here to split and give the value
-	return kV[i+1:]
-}
-
 func keyValueSplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	// if atEOF && len(data) == 0 {
 
 	// if at EOF, as the key vals have a trailing delimiter, return nothing
 	if atEOF || len(data) == 0 {
 		return 0, nil, nil
 	}
 
+	// if the keyValueDelimiter is present, return data left set to it
 	if i := bytes.IndexByte(data, keyValueDelimiter); i >= 0 {
 		return i + 1, data[0:i], nil
 	}
-
-	// if atEOF {
-	// 	return
-	// }
 
 	return
 }
